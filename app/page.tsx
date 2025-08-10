@@ -136,9 +136,9 @@ export default function Page() {
               imageUrl: previewUrl,
             }
 
-            // Navigate to results page with data
-            const encodedData = encodeURIComponent(JSON.stringify(resultWithImage))
-            router.push(`/results?data=${encodedData}`)
+            // Store in sessionStorage instead of URL params
+            sessionStorage.setItem("analysisResult", JSON.stringify(resultWithImage))
+            router.push("/results")
           }, 400)
         }
         return next
@@ -213,6 +213,7 @@ export default function Page() {
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("userEmail")
+    sessionStorage.removeItem("analysisResult")
     router.push("/login")
   }
 

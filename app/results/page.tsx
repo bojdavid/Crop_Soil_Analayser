@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, CheckCircle2, AlertTriangle, Scan, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,8 +20,8 @@ type AnalysisResult = {
 export default function ResultsPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [userEmail, setUserEmail] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     // Check authentication
@@ -35,44 +35,56 @@ export default function ResultsPage() {
 
     setUserEmail(email)
 
-    // Get result from URL params or localStorage
-    const resultData = searchParams.get("data")
-    if (resultData) {
-      try {
-        const parsedResult = JSON.parse(decodeURIComponent(resultData))
-        setResult(parsedResult)
-      } catch (error) {
-        console.error("Failed to parse result data:", error)
-        router.push("/")
-      }
-    } else {
-      // Fallback to localStorage
-      const storedResult = localStorage.getItem("analysisResult")
+    // Get result from sessionStorage
+    try {
+      const storedResult = sessionStorage.getItem("analysisResult")
       if (storedResult) {
-        setResult(JSON.parse(storedResult))
-        localStorage.removeItem("analysisResult") // Clean up
+        const parsedResult = JSON.parse(storedResult)
+        setResult(parsedResult)
       } else {
+        // No result found, redirect to home
         router.push("/")
+        return
       }
+    } catch (error) {
+      console.error("Failed to parse result data:", error)
+      router.push("/")
+      return
     }
-  }, [router, searchParams])
+
+    setIsLoading(false)
+  }, [router])
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("userEmail")
+    sessionStorage.removeItem("analysisResult")
     router.push("/login")
   }
 
   const handleBackToAnalysis = () => {
+    sessionStorage.removeItem("analysisResult")
     router.push("/")
+  }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Scan className="h-8 w-8 text-emerald-600 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading results...</p>
+        </div>
+      </main>
+    )
   }
 
   if (!result) {
     return (
       <main className="min-h-[100dvh] bg-white flex items-center justify-center">
         <div className="text-center">
-          <Scan className="h-8 w-8 text-emerald-600 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading results...</p>
+          <AlertTriangle className="h-8 w-8 text-red-600 mx-auto mb-4" />
+          <p className="text-muted-foreground mb-4">No analysis results found.</p>
+          <Button onClick={() => router.push("/")}>Return to Analysis</Button>
         </div>
       </main>
     )
