@@ -20,6 +20,7 @@ type AnalysisResult = {
 export default function ResultsPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [userEmail, setUserEmail] = useState("")
+  const [userName, setUserName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
@@ -27,6 +28,7 @@ export default function ResultsPage() {
     // Check authentication
     const isAuthenticated = localStorage.getItem("isAuthenticated")
     const email = localStorage.getItem("userEmail")
+    const name = localStorage.getItem("userName")
 
     if (!isAuthenticated || !email) {
       router.push("/login")
@@ -34,6 +36,7 @@ export default function ResultsPage() {
     }
 
     setUserEmail(email)
+    setUserName(name || email)
 
     // Get result from sessionStorage
     try {
@@ -58,6 +61,7 @@ export default function ResultsPage() {
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("userEmail")
+    localStorage.removeItem("userName")
     sessionStorage.removeItem("analysisResult")
     router.push("/login")
   }
@@ -120,7 +124,10 @@ export default function ResultsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            <div className="text-right">
+              <p className="text-sm font-medium">{userName}</p>
+              <p className="text-xs text-muted-foreground">{userEmail}</p>
+            </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               Logout

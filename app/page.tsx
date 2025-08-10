@@ -31,6 +31,7 @@ export default function Page() {
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState("")
+  const [userName, setUserName] = useState("")
 
   const [isDragging, setIsDragging] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -43,6 +44,7 @@ export default function Page() {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAuthenticated")
     const email = localStorage.getItem("userEmail")
+    const name = localStorage.getItem("userName")
 
     if (!isAuthenticated || !email) {
       router.push("/login")
@@ -50,6 +52,7 @@ export default function Page() {
     }
 
     setUserEmail(email)
+    setUserName(name || email)
   }, [router])
 
   // Create/revoke preview URL
@@ -231,6 +234,7 @@ export default function Page() {
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("userEmail")
+    localStorage.removeItem("userName")
     sessionStorage.removeItem("analysisResult")
     router.push("/login")
   }
@@ -263,7 +267,10 @@ export default function Page() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            <div className="text-right">
+              <p className="text-sm font-medium">{userName}</p>
+              <p className="text-xs text-muted-foreground">{userEmail}</p>
+            </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               Logout

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Eye, EyeOff, Scan } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,14 +27,30 @@ export default function LoginPage() {
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    // Check credentials
+    // Check demo credentials first
     if (email === "user18@gmail.com" && password === "12345678") {
-      // Store auth state in localStorage
       localStorage.setItem("isAuthenticated", "true")
       localStorage.setItem("userEmail", email)
+      localStorage.setItem("userName", "Demo User")
       router.push("/")
-    } else {
-      setError("Invalid email or password")
+      return
+    }
+
+    // Check registered users
+    try {
+      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]")
+      const user = registeredUsers.find((u: any) => u.email === email && u.password === password)
+
+      if (user) {
+        localStorage.setItem("isAuthenticated", "true")
+        localStorage.setItem("userEmail", user.email)
+        localStorage.setItem("userName", user.fullName)
+        router.push("/")
+      } else {
+        setError("Invalid email or password")
+      }
+    } catch (error) {
+      setError("Login failed. Please try again.")
     }
 
     setIsLoading(false)
@@ -49,7 +66,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl">Welcome to AgriScan</CardTitle>
+            <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to analyze your soil and crops</CardDescription>
           </div>
         </CardHeader>
@@ -97,7 +114,19 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+
+          {/* Sign Up Link */}
+          <div className="mt-6 text-center text-sm">
+            <p className="text-muted-foreground">
+              Don't have an account?{" "}
+              <Link href="/signup" className="font-medium text-emerald-600 hover:text-emerald-500">
+                Create one
+              </Link>
+            </p>
+          </div>
+
+          {/* Demo Info */}
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             <p>Demo credentials:</p>
             <p className="font-mono text-xs mt-1">
               Email: user18@gmail.com
