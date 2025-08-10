@@ -2,8 +2,9 @@
 
 import type React from "react"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Upload, Leaf, Sprout, CheckCircle2, AlertTriangle, Scan } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Upload, Leaf, Sprout, Scan, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +20,9 @@ type AnalysisResult = {
   confidence: number
   notes: string
   metrics: Record<string, string | number>
+  analysisType: AnalysisType
+  cropType?: CropType
+  imageUrl?: string
 }
 
 export default function Page() {
@@ -26,13 +30,27 @@ export default function Page() {
   const [cropType, setCropType] = useState<CropType>("tomato")
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState("")
 
   const [isDragging, setIsDragging] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
 
   const pendingScanRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const router = useRouter()
+
+  // Check authentication on mount
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem("isAuthenticated")
+    const email = localStorage.getItem("userEmail")
+
+    if (!isAuthenticated || !email) {
+      router.push("/login")
+      return
+    }
+
+    setUserEmail(email)
+  }, [router])
 
   // Create/revoke preview URL
   useEffect(() => {
@@ -60,8 +78,7 @@ export default function Page() {
     }
     setScanning(false)
     setProgress(0)
-    setResult(null)
-    // Keep the file if reason is not "type-change"? For clarity, clear it unless user specifically wants to keep.
+    // Keep the file if reason is not "type-change"
     if (reason !== "keep-file") {
       setFile(null)
       setPreviewUrl(null)
@@ -89,22 +106,17 @@ export default function Page() {
 
   function handleFile(newFile: File) {
     setFile(newFile)
-    setResult(null)
-    // If crop type is required, we already have a default "tomato", so continue.
     startScan(newFile)
   }
 
   function startScan(sourceFile: File) {
     setScanning(true)
     setProgress(0)
-    setResult(null)
     if (pendingScanRef.current) clearInterval(pendingScanRef.current)
 
     // Simulate scanning progress
-    const start = Date.now()
     pendingScanRef.current = setInterval(() => {
       setProgress((prev) => {
-        // Smooth-ish progress until 100%
         const delta = Math.random() * 6 + 2 // 2-8 per tick
         const next = Math.min(prev + delta, 100)
         if (next >= 100) {
@@ -112,11 +124,21 @@ export default function Page() {
             clearInterval(pendingScanRef.current)
             pendingScanRef.current = null
           }
-          // After a brief pause, finalize result
+          // After a brief pause, finalize result and navigate
           setTimeout(() => {
-            const r = generateSampleResult(analysisType, cropType, sourceFile)
-            setResult(r)
-            setScanning(false)
+            const result = generateSampleResult(analysisType, cropType, sourceFile)
+
+            // Store result and navigate to results page
+            const resultWithImage = {
+              ...result,
+              analysisType,
+              cropType: analysisType === "crop" ? cropType : undefined,
+              imageUrl: previewUrl,
+            }
+
+            // Navigate to results page with data
+            const encodedData = encodeURIComponent(JSON.stringify(resultWithImage))
+            router.push(`/results?data=${encodedData}`)
           }, 400)
         }
         return next
@@ -151,6 +173,7 @@ export default function Page() {
         status,
         confidence,
         notes,
+        analysisType: kind,
         metrics: {
           pH: ph,
           "Moisture (%)": moisture,
@@ -175,6 +198,8 @@ export default function Page() {
         status,
         confidence,
         notes,
+        analysisType: kind,
+        cropType: crop,
         metrics: {
           "Health Index": healthIdx,
           "Disease Risk": diseaseRisk,
@@ -185,33 +210,46 @@ export default function Page() {
     }
   }
 
-  const statusColor = useMemo(
-    () =>
-      result?.status === "Good"
-        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-        : "text-red-700 bg-red-50 border-red-200",
-    [result?.status],
-  )
-  const statusIcon =
-    result?.status === "Good" ? (
-      <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden />
-    ) : (
-      <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden />
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated")
+    localStorage.removeItem("userEmail")
+    router.push("/login")
+  }
+
+  // Don't render if not authenticated
+  if (!userEmail) {
+    return (
+      <main className="min-h-[100dvh] bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Scan className="h-8 w-8 text-emerald-600 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </main>
     )
+  }
 
   return (
     <main className="min-h-[100dvh] bg-white">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 md:py-10">
-        <header className="mb-6 md:mb-8">
-          <div className="flex items-center gap-2">
-            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
-              <Scan className="h-5 w-5 text-emerald-700" />
+        <header className="mb-6 md:mb-8 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
+                <Scan className="h-5 w-5 text-emerald-700" />
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight md:text-2xl">AgriScan</h1>
             </div>
-            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">AgriScan</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Analyze soil or crop images. Choose a category, upload an image, and view a quick simulated assessment.
+            </p>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Analyze soil or crop images. Choose a category, upload an image, and view a quick simulated assessment.
-          </p>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </header>
 
         <div className="grid gap-6 md:grid-cols-5">
@@ -275,6 +313,7 @@ export default function Page() {
                     onChange={onBrowseChange}
                     aria-label="Upload image for analysis"
                     className="sr-only"
+                    disabled={scanning}
                   />
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-100">
                     <Upload className="h-5 w-5 text-emerald-700" aria-hidden />
@@ -293,7 +332,7 @@ export default function Page() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => resetAnalysis()} disabled={!file && !result && !scanning}>
+                <Button variant="outline" onClick={() => resetAnalysis()} disabled={!file && !scanning}>
                   Reset
                 </Button>
                 {analysisType === "soil" ? (
@@ -310,11 +349,11 @@ export default function Page() {
             </CardContent>
           </Card>
 
-          {/* Preview + Scan + Result */}
+          {/* Preview + Scan */}
           <Card className="md:col-span-3">
             <CardHeader className="space-y-1">
               <CardTitle>Preview & Analysis</CardTitle>
-              <CardDescription>Scanning starts automatically after upload.</CardDescription>
+              <CardDescription>Scanning starts automatically after upload and redirects to results.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="relative overflow-hidden rounded-lg border">
@@ -370,7 +409,7 @@ export default function Page() {
                       <div className="flex items-center justify-between gap-3">
                         <div className="inline-flex items-center gap-2 text-sm">
                           <Scan className="h-4 w-4 text-emerald-600" />
-                          <span className="font-medium">Scanning...</span>
+                          <span className="font-medium">Analyzing image...</span>
                         </div>
                         <span className="text-xs tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
                       </div>
@@ -381,65 +420,15 @@ export default function Page() {
                         />
                       </div>
                     </div>
-                  ) : result ? (
-                    <div
-                      className={cn("flex items-center justify-between gap-3 rounded-md border px-3 py-2", statusColor)}
-                    >
-                      <div className="inline-flex items-center gap-2">
-                        {statusIcon}
-                        <span className="text-sm font-medium">
-                          {analysisType === "soil"
-                            ? `Soil status: ${result.status}`
-                            : `${capitalize(cropType)} crop status: ${result.status}`}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">Confidence: {result.confidence}%</span>
-                    </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground">Upload an image to begin scanning.</div>
+                    <div className="text-sm text-muted-foreground">Upload an image to begin analysis.</div>
                   )}
                 </div>
               </div>
 
-              {/* Sample data */}
-              {result && (
-                <div className="grid gap-3">
-                  <div className="text-sm font-medium">Sample data</div>
-                  <div className="grid gap-2 rounded-lg border p-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
-                      {Object.entries(result.metrics).map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="flex items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2"
-                        >
-                          <span className="text-muted-foreground">{k}</span>
-                          <span className="font-medium text-foreground">
-                            {typeof v === "number" ? formatNumber(v) : v}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2">
-                        <span className="text-muted-foreground">Status</span>
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold",
-                            result.status === "Good" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
-                          )}
-                        >
-                          {result.status === "Good" ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                          )}
-                          {result.status}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{result.notes}</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    This is a simulated demo. Integrate a real model or rules engine to power production analysis.
-                  </p>
+              {scanning && (
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>Processing your image... You'll be redirected to the results page when complete.</p>
                 </div>
               )}
             </CardContent>
@@ -456,12 +445,4 @@ function formatBytes(bytes: number): string {
   const sizes = ["B", "KB", "MB", "GB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? `${n}` : n.toFixed(1)
-}
-
-function capitalize<T extends string>(s: T): T {
-  return (s.charAt(0).toUpperCase() + s.slice(1)) as T
 }
