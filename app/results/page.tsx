@@ -14,7 +14,7 @@ type AnalysisResult = {
   metrics: Record<string, string | number>
   analysisType: "soil" | "crop"
   cropType?: string
-  imageUrl?: string
+  imageData?: string // Base64 encoded image data
 }
 
 export default function ResultsPage() {
@@ -136,15 +136,18 @@ export default function ResultsPage() {
             </CardHeader>
             <CardContent>
               <div className="aspect-square rounded-lg border overflow-hidden bg-muted">
-                {result.imageUrl ? (
+                {result.imageData ? (
                   <img
-                    src={result.imageUrl || "/placeholder.svg"}
+                    src={result.imageData || "/placeholder.svg"}
                     alt="Analyzed image"
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <Scan className="h-12 w-12" />
+                    <div className="text-center">
+                      <Scan className="h-12 w-12 mx-auto mb-2" />
+                      <p className="text-sm">Image not available</p>
+                    </div>
                   </div>
                 )}
               </div>

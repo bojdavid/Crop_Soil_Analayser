@@ -22,7 +22,7 @@ type AnalysisResult = {
   metrics: Record<string, string | number>
   analysisType: AnalysisType
   cropType?: CropType
-  imageUrl?: string
+  imageData?: string // Base64 encoded image data
 }
 
 export default function Page() {
@@ -109,6 +109,16 @@ export default function Page() {
     startScan(newFile)
   }
 
+  // Convert file to base64 for storage
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
   function startScan(sourceFile: File) {
     setScanning(true)
     setProgress(0)
@@ -125,18 +135,26 @@ export default function Page() {
             pendingScanRef.current = null
           }
           // After a brief pause, finalize result and navigate
-          setTimeout(() => {
+          setTimeout(async () => {
             const result = generateSampleResult(analysisType, cropType, sourceFile)
+
+            // Convert image to base64 for storage
+            let imageData: string | undefined
+            try {
+              imageData = await fileToBase64(sourceFile)
+            } catch (error) {
+              console.error("Failed to convert image to base64:", error)
+            }
 
             // Store result and navigate to results page
             const resultWithImage = {
               ...result,
               analysisType,
               cropType: analysisType === "crop" ? cropType : undefined,
-              imageUrl: previewUrl,
+              imageData,
             }
 
-            // Store in sessionStorage instead of URL params
+            // Store in sessionStorage
             sessionStorage.setItem("analysisResult", JSON.stringify(resultWithImage))
             router.push("/results")
           }, 400)
