@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, Leaf, Sprout, Scan, LogOut } from "lucide-react"
+import { Upload, Leaf, Sprout, Scan, LogOut, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -160,7 +160,7 @@ export default function Page() {
             // Store in sessionStorage
             sessionStorage.setItem("analysisResult", JSON.stringify(resultWithImage))
             router.push("/results")
-          }, 9000)
+          }, 400)
         }
         return next
       })
@@ -278,9 +278,9 @@ export default function Page() {
           </div>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-5">
+        <div className={cn("grid gap-6", file ? "md:grid-cols-5" : "")}>
           {/* Controls */}
-          <Card className="md:col-span-2">
+          <Card className={cn(file ? "md:col-span-2" : "max-w-md mx-auto")}>
             <CardHeader className="space-y-1">
               <CardTitle>Setup</CardTitle>
               <CardDescription>Choose what to analyze and upload an image.</CardDescription>
@@ -308,8 +308,9 @@ export default function Page() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="tomato">Tomato</SelectItem>
-                      <SelectItem value="yam">Maize</SelectItem>
-                      <SelectItem value="potato">Cassava</SelectItem>
+                      <SelectItem value="yam">Yam</SelectItem>
+                      <SelectItem value="potato">Potato</SelectItem>
+                      <SelectItem value="onions">Onions</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -374,91 +375,122 @@ export default function Page() {
             </CardContent>
           </Card>
 
-          {/* Preview + Scan */}
-          <Card className="md:col-span-3">
-            <CardHeader className="space-y-1">
-              <CardTitle>Preview & Analysis</CardTitle>
-              <CardDescription>Scanning starts automatically after upload and redirects to results.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="relative overflow-hidden rounded-lg border">
-                <div className="relative aspect-video bg-muted">
-                  {previewUrl ? (
-                    <>
-                      <img
-                        src={previewUrl || "/placeholder.svg"}
-                        alt="Uploaded image preview"
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                      {/* Scanner overlay */}
-                      {(scanning || progress > 0) && (
-                        <div aria-hidden className="pointer-events-none absolute inset-0">
-                          {/* Dim overlay while scanning */}
-                          {scanning && <div className="absolute inset-0 bg-black/20" />}
-                          {/* Moving scan line based on progress */}
-                          {scanning && (
+          {/* Preview + Scan - Only show when file is uploaded */}
+          {file && (
+            <Card className="md:col-span-3">
+              <CardHeader className="space-y-1">
+                <CardTitle>Preview & Analysis</CardTitle>
+                <CardDescription>Scanning starts automatically after upload and redirects to results.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="relative overflow-hidden rounded-lg border">
+                  <div className="relative aspect-video bg-muted">
+                    {previewUrl ? (
+                      <>
+                        <img
+                          src={previewUrl || "/placeholder.svg"}
+                          alt="Uploaded image preview"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        {/* Scanner overlay */}
+                        {(scanning || progress > 0) && (
+                          <div aria-hidden className="pointer-events-none absolute inset-0">
+                            {/* Dim overlay while scanning */}
+                            {scanning && <div className="absolute inset-0 bg-black/20" />}
+                            {/* Moving scan line based on progress */}
+                            {scanning && (
+                              <div
+                                className="absolute left-0 right-0 h-24 bg-gradient-to-b from-transparent via-emerald-300/70 to-transparent blur-[2px]"
+                                style={{
+                                  top: `${Math.min(progress, 98)}%`,
+                                  transform: "translateY(-100%)",
+                                  transition: "top 120ms linear",
+                                }}
+                              />
+                            )}
+                            {/* Grid overlay for effect */}
                             <div
-                              className="absolute left-0 right-0 h-24 bg-gradient-to-b from-transparent via-emerald-300/70 to-transparent blur-[2px]"
+                              className="absolute inset-0 opacity-30"
                               style={{
-                                top: `${Math.min(progress, 98)}%`,
-                                transform: "translateY(-100%)",
-                                transition: "top 120ms linear",
+                                backgroundImage:
+                                  "linear-gradient(transparent 23px, rgba(0,0,0,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(0,0,0,0.08) 24px)",
+                                backgroundSize: "24px 24px, 24px 24px",
                               }}
                             />
-                          )}
-                          {/* Grid overlay for effect */}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                        <div className="text-center">
+                          <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+                          <p className="text-sm">Loading image...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress and status bar */}
+                  <div className="border-t bg-background p-3">
+                    {scanning ? (
+                      <div className="grid gap-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="inline-flex items-center gap-2 text-sm">
+                            <Scan className="h-4 w-4 text-emerald-600" />
+                            <span className="font-medium">Analyzing image...</span>
+                          </div>
+                          <span className="text-xs tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                           <div
-                            className="absolute inset-0 opacity-30"
-                            style={{
-                              backgroundImage:
-                                "linear-gradient(transparent 23px, rgba(0,0,0,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(0,0,0,0.08) 24px)",
-                              backgroundSize: "24px 24px, 24px 24px",
-                            }}
+                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            style={{ width: `${progress}%` }}
                           />
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <img
-                      src="/agriculture-analysis-placeholder.png"
-                      alt="Placeholder"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Analysis will begin automatically...</div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Progress and status bar */}
-                <div className="border-t bg-background p-3">
-                  {scanning ? (
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="inline-flex items-center gap-2 text-sm">
-                          <Scan className="h-4 w-4 text-emerald-600" />
-                          <span className="font-medium">Analyzing image...</span>
-                        </div>
-                        <span className="text-xs tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-emerald-500 transition-all"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">Upload an image to begin analysis.</div>
-                  )}
+                {scanning && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>Processing your image... You'll be redirected to the results page when complete.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Instructions when no file is uploaded */}
+        {!file && (
+          <div className="mt-8 text-center max-w-2xl mx-auto">
+            <div className="rounded-lg bg-muted/40 p-6">
+              <ImageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Ready to Analyze</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Upload an image of your {analysisType === "soil" ? "soil sample" : `${cropType} crop`} to get started
+                with the analysis.
+              </p>
+              <div className="grid gap-2 text-xs text-muted-foreground max-w-md mx-auto">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Supported formats: JPG, PNG, WEBP</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Maximum file size: 10MB</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Analysis takes approximately 3-5 seconds</span>
                 </div>
               </div>
-
-              {scanning && (
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>Processing your image... You'll be redirected to the results page when complete.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )
