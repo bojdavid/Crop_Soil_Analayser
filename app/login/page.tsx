@@ -125,15 +125,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Demo Info */}
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Demo credentials:</p>
-            <p className="font-mono text-xs mt-1">
-              Email: user18@gmail.com
-              <br />
-              Password: 12345678
-            </p>
-          </div>
+          
         </CardContent>
       </Card>
     </main>
