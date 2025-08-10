@@ -240,12 +240,7 @@ export default function ResultsPage() {
           </Card>
         </div>
 
-        {/* Disclaimer */}
-        <div className="mt-8 text-center">
-          <p className="text-xs text-muted-foreground">
-            This is a simulated demo. For production use, integrate with real AI models and agricultural databases.
-          </p>
-        </div>
+        
       </div>
     </main>
   )
