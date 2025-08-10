@@ -160,7 +160,7 @@ export default function Page() {
             // Store in sessionStorage
             sessionStorage.setItem("analysisResult", JSON.stringify(resultWithImage))
             router.push("/results")
-          }, 400)
+          }, 1000)
         }
         return next
       })
