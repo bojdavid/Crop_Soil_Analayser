@@ -308,9 +308,8 @@ export default function Page() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="tomato">Tomato</SelectItem>
-                      <SelectItem value="yam">Yam</SelectItem>
-                      <SelectItem value="potato">Potato</SelectItem>
-                      <SelectItem value="onions">Onions</SelectItem>
+                      <SelectItem value="yam">Maize</SelectItem>
+                      <SelectItem value="potato">Cassava</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
